@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import pickle
@@ -113,32 +114,44 @@ class ContentBasedRecommender():
 
         return result_rec
 
-    def get_popular_apps(self, limit=10, min_ratings=100):
-        popular_apps = self.df[self.df['rating_count'] >= min_ratings].copy()
-        if len(popular_apps) < 1:
+    def get_trending_apps(self, limit=10, min_ratings=100, strategy_type="balanced"):
+        trends = self.df[self.df['rating_count'] >= min_ratings].copy()
+
+        if len(trends) < 1:
             return "Нет приложений с достаточным числом отзывов"
 
-        popular_apps = popular_apps.sort_value(['average_rating', 'rating_count'], ascending=[False, False])
+        strategies = {
+            "balanced": (0.5, 0.5),
+            "rating_focused": (0.9, 0.1),
+            "rating_count_focused": (0.1, 0.9)
+        }
 
-        result_pop = popular_apps[[
+        rating_weight, rating_count_weight = strategies.get(strategy_type, (0.5, 0.5))
+
+        normalized_rating = trends['average_rating'] / 5.0
+        max_rating_count = trends['rating_count'].max()
+        normalized_rating_count = np.log10(trends['rating_count'] + 1) / np.log10(max_rating_count + 1)
+
+        trend_score = (rating_weight * normalized_rating +
+                       rating_count_weight * normalized_rating_count)
+
+        trends['trend_score'] = trend_score
+
+        trends_result = trends.nlargest(limit, 'trend_score')[[
             'track_id', 'track_name', 'primary_genre', 'genres',
-            'average_rating', 'rating_count', 'icon_url'
-        ]].head(limit).copy()
+            'average_rating', 'rating_count', 'trend_score', 'icon_url'
+        ]].copy()
 
-        if isinstance(result_pop['genres'], pd.Series):
+        if isinstance(trends_result['genres'], pd.Series):
             processed_genres = []
-            for i in range(len(result_pop['genres'])):
-                genres_value = result_pop['genres'].iloc[i]
+            for i in range(len(trends_result['genres'])):
+                genres_value = trends_result['genres'].iloc[i]
                 if isinstance(genres_value, str):
                     genres_list = [genre.strip() for genre in genres_value.split(',')]
                     processed_genres.append(genres_list)
                 else:
                     processed_genres.append(genres_value)
 
-            result_pop['genres'] = processed_genres
+            trends_result['genres'] = processed_genres
 
-        return result_pop
-
-
-    def get_trending_apps(self):
-        pass
+        return trends_result

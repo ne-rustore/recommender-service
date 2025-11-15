@@ -36,6 +36,8 @@ async def lifespan(app: FastAPI):
             recommender.train(df_processed)
             recommender.save_model(model_path)
 
+
+
     except Exception as e:
         print(f"Ошибка инициализации: {e}")
 
@@ -68,27 +70,21 @@ async def get_recommendations(track_id: int, limit: int = 5, offset: int = 0):
         return {"error": f"Ошибка получения рекомендаций: {e}"}
 
 
-@app.get("/popular")
-async def get_popular_apps(limit: int = 10, min_ratings: int = 100):
+@app.get("/get_trends")
+async def get_trending_apps(limit: int = 10, min_ratings: int = 100, strategy_type: str = "balanced"):
     if recommender is None:
         return {"error": "Модель не обучена"}
 
     try:
-        top_popular_apps = recommender.get_popular_apps(limit, min_ratings)
-        if isinstance(top_popular_apps, str):
+        best_apps = recommender.get_trending_apps(limit, min_ratings, strategy_type)
+        if isinstance(best_apps, str):
             return {
-                "error": top_popular_apps,
+                "error": best_apps,
             }
 
         return {
-            "apps": top_popular_apps.to_dict('records') if hasattr(top_popular_apps,
-                                                                               'to_dict') else top_popular_apps
+            "apps": best_apps.to_dict('records') if hasattr(best_apps, 'to_dict') else best_apps
         }
 
     except Exception as e:
         return {"error": f"Ошибка получения топа: {e}"}
-
-
-@app.get("/trending")
-async def get_trending_apps():
-    pass
