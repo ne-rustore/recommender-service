@@ -113,8 +113,32 @@ class ContentBasedRecommender():
 
         return result_rec
 
-    def get_popular_apps(self):
-        pass
+    def get_popular_apps(self, limit=10, min_ratings=100):
+        popular_apps = self.df[self.df['rating_count'] >= min_ratings].copy()
+        if len(popular_apps) < 1:
+            return "Нет приложений с достаточным числом отзывов"
+
+        popular_apps = popular_apps.sort_value(['average_rating', 'rating_count'], ascending=[False, False])
+
+        result_pop = popular_apps[[
+            'track_id', 'track_name', 'primary_genre', 'genres',
+            'average_rating', 'rating_count', 'icon_url'
+        ]].head(limit).copy()
+
+        if isinstance(result_pop['genres'], pd.Series):
+            processed_genres = []
+            for i in range(len(result_pop['genres'])):
+                genres_value = result_pop['genres'].iloc[i]
+                if isinstance(genres_value, str):
+                    genres_list = [genre.strip() for genre in genres_value.split(',')]
+                    processed_genres.append(genres_list)
+                else:
+                    processed_genres.append(genres_value)
+
+            result_pop['genres'] = processed_genres
+
+        return result_pop
+
 
     def get_trending_apps(self):
         pass
