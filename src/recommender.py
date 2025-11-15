@@ -92,27 +92,16 @@ class ContentBasedRecommender():
 
         app_indices = [i[0] for i in similar_scores]
 
-        result_rec = self.df.iloc[app_indices][[
+        rec_table = self.df.iloc[app_indices][[
             'track_id', 'track_name', 'primary_genre', 'genres',
             'average_rating', 'rating_count', 'icon_url'
         ]].copy()
 
         sim = [i[1] for i in similar_scores]
-        result_rec['similarity_score'] = sim
+        rec_table['similarity_score'] = sim
+        result = rec_table['track_id']
 
-        if isinstance(result_rec['genres'], pd.Series):
-            processed_genres = []
-            for i in range(len(result_rec['genres'])):
-                genres_value = result_rec['genres'].iloc[i]
-                if isinstance(genres_value, str):
-                    genres_list = [genre.strip() for genre in genres_value.split(',')]
-                    processed_genres.append(genres_list)
-                else:
-                    processed_genres.append(genres_value)
-
-            result_rec['genres'] = processed_genres
-
-        return result_rec
+        return result
 
     def get_trending_apps(self, limit=10, min_ratings=100, strategy_type="balanced"):
         trends = self.df[self.df['rating_count'] >= min_ratings].copy()
@@ -154,4 +143,6 @@ class ContentBasedRecommender():
 
             trends_result['genres'] = processed_genres
 
-        return trends_result
+        result = trends_result['track_id']
+
+        return result
